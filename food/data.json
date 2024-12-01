@@ -1,0 +1,11 @@
+{
+  "model": 1,
+  "name": "测试动态链接",
+  "url": "http://scjgj.linfen.gov.cn/zl/spypjz/spaqcj/",
+  "waitTime": 5000,
+  "class": "a",
+  "attributeKey": "title",
+  "attributeKeyContains": "抽检",
+  "fileForm": "",
+  "fileStartLine": 2
+}
