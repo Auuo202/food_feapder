@@ -21,17 +21,23 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
+CHROME_DRIVER = pathlib.Path('/Users/auuo/ff_test/feapder/food/spiders/chromedriver')
+
+
 class FoodSpiderAir(feapder.AirSpider):
     # 中间件
     # def download_midware(self, request: Request):
     #     request.headers = {
     #     "User-Agent" : "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     #     }
+    def __init__(self, config_path, **kwargs):
+        self.config_path = config_path
+        return super().__init__(**kwargs)
 
     def start_requests(self):
         # 读取json
         # json_url = input('JSON')
-        with open("/Users/auuo/ff_test/feapder/food/data.json", 'r', encoding='utf-8') as f:
+        with open(self.config_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         item = dict(data)
         # 动态或静态
@@ -60,7 +66,7 @@ class FoodSpiderAir(feapder.AirSpider):
         # 提取网站链接
         a_list = []
         # 跳转a标签
-        a_all = response.xpath("//a")
+        a_all = response.xpath("//a")  # class a[href] TODO
         # 响应和源码不同
         # 写入配置文件
         # a_all = response.xpath("//li")
@@ -106,7 +112,7 @@ class FoodSpiderAir(feapder.AirSpider):
         q1.add_argument('--no-sandbox')
         q1.add_experimental_option('detach', True)
         # 导入driver
-        service = Service('/Users/auuo/ff_test/feapder/food/spiders/chromedriver')
+        service = Service(CHROME_DRIVER)
         # 创建浏览器对象
         driver = webdriver.Chrome(service=service, options=q1)
 
@@ -157,7 +163,7 @@ class FoodSpiderAir(feapder.AirSpider):
         q1.add_argument('--no-sandbox')
         q1.add_experimental_option('detach', True)
         # 导入driver
-        service = Service('/Users/auuo/ff_test/feapder/food/spiders/chromedriver')
+        service = Service(CHROME_DRIVER)
         # 创建浏览器对象
         driver = webdriver.Chrome(service=service, options=q1)
 
@@ -182,6 +188,7 @@ class FoodSpiderAir(feapder.AirSpider):
                 download_content = download.xpath('./text()').extract()
                 download_content_string = ''.join(download_content)
                 # print(download_content_string)
+                # TODO: xls, xlsx, doc, docx, pdf, zip
                 if (re.findall(r"xls", download_content_string) != [] or
                         re.findall(r"xlsx", download_content_string) != []):
                     download_list = download.xpath('./@href').extract()
@@ -216,4 +223,4 @@ class FoodSpiderAir(feapder.AirSpider):
         return full_url
 
 if __name__ == "__main__":
-    FoodSpiderAir().start()
+    FoodSpiderAir(config_path="/Users/auuo/ff_test/feapder/food/data.json").start()
