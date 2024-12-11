@@ -1,0 +1,10 @@
+{"model": 0,
+  "name": "测试动态链接",
+  "url": "https://www.linyi.gov.cn/typt/zdly1/scjg/spypaq.htm",
+  "waitTime": 5000,
+  "class": "a[href]",
+  "attributeKey": "title",
+  "attributeKeyContains": "不合格",
+  "fileForm": "",
+  "fileStartLine": 2
+}

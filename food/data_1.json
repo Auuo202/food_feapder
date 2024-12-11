@@ -1,0 +1,10 @@
+{"model": 1,
+  "name": "静态大同市链接",
+  "url": "https://www.zuoyun.gov.cn/zyxrmzfz/spaqcj/listN.shtml",
+  "waitTime": 5000,
+  "class": "li[data-url]",
+  "attributeKey": "data-title",
+  "attributeKeyContains": "抽检",
+  "fileForm": "",
+  "fileStartLine": 2
+}
