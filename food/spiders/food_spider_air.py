@@ -229,6 +229,7 @@ class FoodSpiderAir(feapder.AirSpider):
         item = request.item
         temp = 0
         try:
+            time.sleep(1)
             download_all = response.xpath('//a')
             for download in download_all:
                 # 网页文本判断
@@ -237,7 +238,6 @@ class FoodSpiderAir(feapder.AirSpider):
                 download_list = download.xpath('./@href').extract()
                 download_list_string = ''.join(download_list)
                 # print(download_content_string)
-                # TODO: xls, xlsx, doc, docx, pdf, zip
 
                 if (re.findall(r"xls", download_list_string) != [] or
                     re.findall(r"xlsx", download_list_string) != [] or
