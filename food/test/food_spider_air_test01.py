@@ -10,23 +10,25 @@ import pathlib
 import time
 import datetime
 import json
-import urllib
 from urllib.parse import urlparse, urlunparse
 import feapder
 import re
-
-from bs4 import BeautifulSoup
 from selenium import webdriver
-# from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from bs4 import BeautifulSoup
 
 
 CHROME_DRIVER = pathlib.Path('/Users/auuo/ff_test/feapder/food/spiders/chromedriver')
-GECKODRIVER = '/Users/auuo/ff_test/food_feapder/food/geckodriver'
+# 配置文件
+q1 = Options()
+q1.add_argument('--no-sandbox')     # 沙盒模式
+q1.add_experimental_option('detach', True)
+# q1.add_argument("--headless")     # 启用无头模式
+
 
 class FoodSpiderAir(feapder.AirSpider):
     # 中间件
@@ -46,9 +48,9 @@ class FoodSpiderAir(feapder.AirSpider):
         # config
         # with open(self.config_path, 'r', encoding='utf-8') as f:
         #     data = json.load(f)
-
         with open('/Users/auuo/ff_test/food_feapder/food/data_2.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
+
         item = dict(data)
         # 动态或静态
         dynamics_or_static = item['model']
@@ -61,7 +63,7 @@ class FoodSpiderAir(feapder.AirSpider):
         base_url = urlunparse((parsed_url.scheme, parsed_url.netloc, '', '', '', ''))
         item['base_url'] = base_url
         # print(base_url)
-
+        item['download_list_all'] = []
         # 解析a[href]
         item['tag_name'] = item['class'].split('[')[0]
         item['attr_name'] = item['class'].split('[')[1].split(']')[0]
@@ -80,9 +82,6 @@ class FoodSpiderAir(feapder.AirSpider):
         # 提取网站链接
         a_list = []
         # 跳转a标签
-        # html_response = response.open()
-        # print(html_response)
-        # all_response = response.Response.from_text(html=html_response, url=request.url)
         a_all = response.xpath(f"//{item['tag_name']}")  # class a[href]
         # 响应和源码不同
         # 写入配置文件
@@ -104,9 +103,9 @@ class FoodSpiderAir(feapder.AirSpider):
             a_content_string = ''.join(a_content)
 
             # 中文正则 href
-            if (((re.findall(r"食品", a_title_string) != [])
+            if (((re.findall(r"食", a_title_string) != [])
                  and re.findall(attribute_key_contains, a_title_string) != [])
-                 or(re.findall(r"食品", a_content_string) != []
+                 or(re.findall(r"食", a_content_string) != []
                  and re.findall(attribute_key_contains, a_content_string) != [])):
                 item['detail_url'] = a.xpath(f"./@{item['attr_name']}").extract()
                 # item['detail_url'] = a.xpath('./@data-url').extract()
@@ -115,7 +114,7 @@ class FoodSpiderAir(feapder.AirSpider):
                 # 响应和源码不同
                 # detail_url = a.xpath('./@data-url').extract()
                 detail_url_string = ''.join(detail_url)
-                full = self.full_url(item['base_url'], detail_url_string)
+                full = self.full_url(item['base_url'], detail_url_string, item['url'])
                 # 输出字页面
                 print(full)
                 yield feapder.Request(full, callback=self.detail_parse, item=item)
@@ -126,28 +125,24 @@ class FoodSpiderAir(feapder.AirSpider):
         item = request.item
         attribute_key_contains = item['attributeKeyContains']
 
-        # 配置文件
-        q1 = Options()
-        q1.add_argument('--no-sandbox')
-        q1.add_experimental_option('detach', True)
+
         # 导入driver
         service = Service(CHROME_DRIVER)
         # 创建浏览器对象
-        # driver = webdriver.Chrome(service=service, options=q1)
-        driver = webdriver.Firefox(GECKODRIVER)
+        driver = webdriver.Chrome(service=service, options=q1)
 
         # 获取网址
         driver.get(response.url)
-        time.sleep(5)
 
-        iframes = driver.find_elements(By.TAG_NAME, "iframe")
-
-        a_tags = driver.find_elements(By.TAG_NAME, 'a')
+        time.sleep(2)
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        temp = 1
+        a_tags = soup.find_all('a')
         # print(a_tags)
         # 遍历所有的 <a> 标签，获取 href 和 title
         for a in a_tags:
-            a_title = a.get_dom_attribute('title')
-            a_content = a.text
+            a_title = a.find('title')
+            a_content = a.get_text()
             # print(a_title)
             # print(a_content)
             if a_title is None:
@@ -157,18 +152,30 @@ class FoodSpiderAir(feapder.AirSpider):
             a_title_string = ''.join(a_title) + 'a'
             a_content_string = ''.join(a_content) + 'a'
 
-            if (((re.findall(r"食品", a_title_string) != [])
+            if (((re.findall(r"食", a_title_string) != [])
                  and re.findall(attribute_key_contains, a_title_string) != [])
-                 or (re.findall(r"食品", a_content_string) != []
+                 or (re.findall(r"食", a_content_string) != []
                  and re.findall(attribute_key_contains, a_content_string) != [])):
-                a_url = a.get_dom_attribute('href')
-                # full_url = self.full_url(item['base_url'], a_url)
-                print(a_url)
+                temp = 0
+                a_url = a.get('href')
+                # print(a_url)
+                if a_url is None:
+                    continue
+                full_url = self.full_url(item['base_url'], a_url, item['url'])
+                # print(full_url)
                 # if a_url == item['url']:
                 #     break
-                # yield feapder.Request(a_url, callback=self.detail_parse, item=item)
+                item['download_list_all'].append(full_url)
+                yield feapder.Request(full_url, callback=self.detail_parse, item=item)
 
+        iframes = driver.find_elements(By.TAG_NAME, "iframe")
+        if iframes is not None and temp == 1:
+            for iframe in iframes:
+                iframe_src = iframe.get_dom_attribute('src')
+                print('iframe_src:', iframe_src)
+                yield feapder.Request(iframe_src, callback=self.frame_parse, item=item)
         driver.quit()
+
 
     def frame_parse(self, request, response):
         url = request.url
@@ -176,10 +183,6 @@ class FoodSpiderAir(feapder.AirSpider):
         item = request.item
         attribute_key_contains = item['attributeKeyContains']
         item['base_url'] = url
-        # 配置文件
-        q1 = Options()
-        q1.add_argument('--no-sandbox')
-        q1.add_experimental_option('detach', True)
         # 导入driver
         service = Service(CHROME_DRIVER)
         # 创建浏览器对象
@@ -212,16 +215,18 @@ class FoodSpiderAir(feapder.AirSpider):
                         and re.findall(attribute_key_contains, a_content_string) != [])):
                 a_url = a.get('href')
                 # print(a_url)
-                full_url = self.full_url(item['base_url'], a_url)
+                full_url = self.full_url(item['base_url'], a_url, item['url'])
                 # print(full_url)
-
+                item['download_list_all'].append(full_url)
                 yield feapder.Request(full_url, callback=self.detail_parse, item=item)
         driver.quit()
 
 
     def detail_parse(self, request, response):
         item = request.item
+        temp = 0
         try:
+            time.sleep(1)
             download_all = response.xpath('//a')
             for download in download_all:
                 # 网页文本判断
@@ -230,26 +235,74 @@ class FoodSpiderAir(feapder.AirSpider):
                 download_list = download.xpath('./@href').extract()
                 download_list_string = ''.join(download_list)
                 # print(download_content_string)
-                # TODO: xls, xlsx, doc, docx, pdf, zip
+
                 if (re.findall(r"xls", download_list_string) != [] or
                     re.findall(r"xlsx", download_list_string) != [] or
                     re.findall(r"xls", download_content_string) != [] or
                     re.findall(r"xlsx", download_content_string) != [] or
                     re.findall(r"pdf", download_list_string) != [] or
                     re.findall(r"docx", download_list_string) != [] or
-                    re.findall(r"zip", download_list_string) != []
-                ):
-                    # print(download_list_string)
-                    item['food_num'] += 1
+                    re.findall(r"doc", download_list_string) != [] or
+                    re.findall(r"zip", download_list_string) != []):
+                    print(download_list_string)
+                    temp += 1
                     yield feapder.Request(download_list_string, callback=self.download_food, item=item)
                     time.sleep(0.5)
+            if temp == 0:
+                    yield feapder.Request(request.url, callback=self.detail_dynamic_mid_parse, item=item)
         except:
             print("error")
 
+    def detail_dynamic_mid_parse(self, request, response):
+        download_list_all = request.item['download_list_all']
+        # print(download_list_all)
+        for li in download_list_all[3:]:
+            # print(li)
+            yield feapder.Request(li, callback=self.detail_dynamic_parse, item=request.item)
+
+
+    def detail_dynamic_parse(self, request, response):
+        item = request.item
+        service = Service(CHROME_DRIVER)
+        # 创建浏览器对象
+        driver = webdriver.Chrome(service=service, options=q1)
+        driver.get(response.url)
+        time.sleep(2)
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        a_tags = soup.find_all('a')
+        for a in a_tags:
+            # 网页文本判断
+            a_href = a.get('href')
+            a_content = a.get_text()
+            # print(a_href)
+            # print(a_content)
+            if a_href is None:
+                a_href = ''
+            if a_content is None:
+                a_content = ''
+            a_href_string = ''.join(a_href)
+            a_content_string = ''.join(a_content)
+            if (re.findall(r"xls", a_href) != [] or
+                    re.findall(r"xlsx", a_href_string) != [] or
+                    re.findall(r"xls", a_content_string) != [] or
+                    re.findall(r"xlsx", a_content_string) != [] or
+                    re.findall(r"pdf", a_href_string) != [] or
+                    re.findall(r"docx", a_href_string) != [] or
+                    re.findall(r"zip", a_href_string) != []):
+                # base_url / 提取a_href / url
+                # print(a_href)
+                full_url = self.download_list_all(item['base_url'], a_href_string, response.url)
+                # print(full_list)
+                yield feapder.Request(full_url, callback=self.download_food, item=request.item)
+                driver.quit()
+
+
+
     def download_food(self, request, response):
+        item = request.item
         download_url = response.url
         print(download_url)
-
+        item['food_num'] += 1
         file_name = download_url.split('/')[-1]
         # print(file_name)
         # 下载
@@ -259,11 +312,15 @@ class FoodSpiderAir(feapder.AirSpider):
         #
         # with open(f'./{today_time}/{file_name}', 'wb') as f:
         #     f.write(response.content)
-        print(request.item['food_num'])
+        print(item['food_num'])
+
 
     @staticmethod
-    def full_url(base_url, href_url):
-
+    def full_url(base_url, href_url, url):
+        if href_url.startswith("./"):
+            href_url = href_url.replace("./", "")
+            full_url = f"{url}/{href_url}"
+            return full_url
         if href_url.startswith("../../"):
             href_url = href_url.replace("../", "")
         if not href_url.startswith(("http://", "https://")):
@@ -273,6 +330,22 @@ class FoodSpiderAir(feapder.AirSpider):
             # 如果href是绝对路径，直接使用
             full_url = href_url
         return full_url
+
+    # TODO 拼接所有url 返回列表下载
+
+    @staticmethod
+    def download_list_all(base_url, href_url, url):
+        full_list = []
+        if href_url.startswith("./"):
+            href_url = href_url.replace("./", "")
+            # 解析 URL
+            parsed_url = urlparse(url)
+            # 获取新的路径（去掉最后部分）
+            new_path = '/'.join(parsed_url.path.split('/')[:-1])
+            # 创建新的 URL
+            new_url = urlunparse((parsed_url.scheme, parsed_url.netloc, new_path,'', '', ''))
+            full_url = f"{new_url}/{href_url}"
+            return full_url
 
 
 if __name__ == "__main__":

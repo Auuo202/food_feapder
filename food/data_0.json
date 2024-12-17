@@ -1,11 +1,11 @@
 {
   "model": 1,
   "name": "测试静态链接",
-  "url": "https://www.linyi.gov.cn/typt/zdly1/scjg/spypaq.htm",
+  "url": "https://scjgj.xinyang.gov.cn/index.php?m=content&c=index&a=lists&catid=46",
   "waitTime": 5000,
   "class": "a[href]",
   "attributeKey": "title",
-  "attributeKeyContains": "不合格",
+  "attributeKeyContains": "抽检",
   "fileForm": "",
   "fileStartLine": 2
 }

@@ -1,10 +1,10 @@
 {"model": 0,
   "name": "测试动态链接",
-  "url": "https://www.linyi.gov.cn/typt/zdly1/scjg/spypaq.htm",
+  "url": "http://www.xingshan.gov.cn/zfxxgk/list.html?depid=320&catid=134",
   "waitTime": 5000,
   "class": "a[href]",
   "attributeKey": "title",
-  "attributeKeyContains": "不合格",
+  "attributeKeyContains": "抽检",
   "fileForm": "",
   "fileStartLine": 2
 }
